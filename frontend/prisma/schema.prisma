@@ -1,0 +1,66 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     String          @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String?
+  email                  String          @unique
+  password               String
+  profileUrl             String?
+  mobileNo               String?
+  emailVerified          Boolean         @default(false)
+  social                 Json[]
+  createdAt              DateTime        @default(now())
+  sentMessages           Message[]       @relation("Send")
+  receivedMessages       Message[]       @relation("Receive")
+  friendsAsUser          Friends[]       @relation("UserFriends")
+  friendsAsFriend        Friends[]       @relation("FriendUsers")
+  sentFriendRequests     FriendRequest[] @relation("Sender")
+  receivedFriendRequests FriendRequest[] @relation("Recipient")
+}
+
+model Message {
+  id         String  @id @default(auto()) @map("_id") @db.ObjectId
+  messsage   Json[]
+  senderId   String? @db.ObjectId
+  receiverId String? @db.ObjectId
+  sender     User?   @relation("Send", fields: [senderId], references: [id])
+  receiver   User?   @relation("Receive", fields: [receiverId], references: [id])
+}
+
+model Friends {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  friendId  String   @db.ObjectId
+  user      User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend    User     @relation("FriendUsers", fields: [friendId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model FriendRequest {
+  id          String              @id @default(auto()) @map("_id") @db.ObjectId
+  sender      User                @relation("Sender", fields: [senderId], references: [id])
+  senderId    String              @db.ObjectId
+  recipient   User                @relation("Recipient", fields: [recipientId], references: [id])
+  recipientId String              @db.ObjectId
+  status      FriendRequestStatus @default(Pending)
+  createdAt   DateTime            @default(now())
+}
+
+enum FriendRequestStatus {
+  Pending
+  Accepted
+  Rejected
+}
